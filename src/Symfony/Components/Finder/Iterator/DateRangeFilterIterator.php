@@ -12,28 +12,28 @@ namespace Symfony\Components\Finder\Iterator;
  */
 
 /**
- * CustomFilterIterator filters files by applying anonymous functions.
- *
- * The anonymous function receives a \SplFileInfo and must return false
- * to remove files.
+ * DateRangeFilterIterator filters out files that are not in the given date range (last modified dates).
  *
  * @package    Symfony
  * @subpackage Components_Finder
  * @author     Fabien Potencier <fabien.potencier@symfony-project.com>
  */
-class CustomFilterIterator extends \FilterIterator
+class DateRangeFilterIterator extends \FilterIterator
 {
-    protected $filters = array();
+    protected $minDate = false;
+    protected $maxDate = false;
 
     /**
      * Constructor.
      *
      * @param \Iterator $iterator The Iterator to filter
-     * @param array     $filters  An array of \Closure
+     * @param integer   $minDate  The minimum date
+     * @param integer   $maxDate  The maximum date
      */
-    public function __construct(\Iterator $iterator, array $filters)
+    public function __construct(\Iterator $iterator, $minDate = false, $maxDate = false)
     {
-        $this->filters = $filters;
+        $this->minDate = $minDate;
+        $this->maxDate = $maxDate;
 
         parent::__construct($iterator);
     }
@@ -47,10 +47,18 @@ class CustomFilterIterator extends \FilterIterator
     {
         $fileinfo = $this->getInnerIterator()->current();
 
-        foreach ($this->filters as $filter) {
-            if (false === $filter($fileinfo)) {
-                return false;
-            }
+        if (!$fileinfo->isFile()) {
+            return true;
+        }
+
+        $filedate = $fileinfo->getMTime();
+
+        if (
+            (false !== $this->minDate && $filedate < $this->minDate)
+            ||
+            (false !== $this->maxDate && $filedate > $this->maxDate)
+        ) {
+            return false;
         }
 
         return true;
